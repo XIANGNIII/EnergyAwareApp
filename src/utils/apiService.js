@@ -4,7 +4,7 @@ import axios from 'axios';
 // IMPORTANT: Do not commit your actual API key to version control
 // For local development, set your API key here
 // For production, use environment variables or secure storage
-const API_KEY = 'YOUR_OPENAI_API_KEY_HERE'; // Replace with your actual API key
+const API_KEY = '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'; // Replace with your actual API key
 
 const instance = axios.create({
   baseURL: 'https://api.openai.com/v1',

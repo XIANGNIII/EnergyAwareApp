@@ -169,7 +169,7 @@ const ChatScreen = () => {
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <View style={styles.modelInfo}>
           <Text style={styles.modelText}>Model: {selectedModel || '-'}</Text>
