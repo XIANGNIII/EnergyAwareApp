@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, InteractionManager } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, InteractionManager, Modal, TextInput, Alert } from 'react-native';
 import { EnergyContext } from '../context/EnergyContext';
 import { LineChart } from 'react-native-chart-kit';
 import EnergyCircle from './EnergyCircle';
@@ -8,9 +8,11 @@ import BottomNavigation from './BottomNavigation';
 const screenWidth = Dimensions.get('window').width;
 
 const EnergyReport = ({ navigation }) => {
-  const { energyLog, totalEnergy, offsetEnergy } = useContext(EnergyContext);
+  const { energyLog, totalEnergy, offsetEnergy, dailyEnergyGoal, setDailyEnergyGoal } = useContext(EnergyContext);
   const [selectedPeriod, setSelectedPeriod] = useState('Week');
   const [selectedItem, setSelectedItem] = useState('Week 1'); // Can be week, month, or year
+  const [isGoalModalVisible, setIsGoalModalVisible] = useState(false);
+  const [goalInput, setGoalInput] = useState(dailyEnergyGoal ? dailyEnergyGoal.toString() : '300');
   
   // Get current year
   const currentYear = new Date().getFullYear();
@@ -90,6 +92,16 @@ const EnergyReport = ({ navigation }) => {
   const handlePeriodChange = useCallback((period) => {
     setSelectedPeriod(period);
   }, []);
+
+  const handleSaveGoal = () => {
+    const newGoal = parseFloat(goalInput);
+    if (isNaN(newGoal) || newGoal <= 0) {
+      Alert.alert("Invalid Input", "Please enter a valid positive number for your energy limit.");
+      return;
+    }
+    setDailyEnergyGoal(newGoal);
+    setIsGoalModalVisible(false);
+  };
   
   return (
     <View style={styles.container}>
@@ -203,9 +215,9 @@ const EnergyReport = ({ navigation }) => {
           />
           </View>
           
-          {/* Total Energy - Concentric circles design */}
+          {/* Total Energy - Progress Bar design */}
           <View style={styles.totalEnergyContainer}>
-            <Text style={styles.totalEnergyLabel}>Total Energy Usage</Text>
+            <Text style={styles.totalEnergyLabel}>Daily Usage Status</Text>
             <EnergyCircle
               primaryValue={totalEnergy}
               primaryLabel="Usage"
@@ -213,30 +225,52 @@ const EnergyReport = ({ navigation }) => {
               secondaryLabel="Offset"
               primaryColor="#1fb28a"
               secondaryColor="#E3F2FD"
-              size={180}
+              size={180} // Just kept for prop compatibility
               variant="report"
+              dailyGoal={dailyEnergyGoal}
+              onGoalPress={() => setIsGoalModalVisible(true)}
             />
-            
-            <View style={styles.actionButtons}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('CarbonOffset')}
-              >
-                <Text style={styles.actionButtonText}>Take Action</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.detailsButton}
-                onPress={() => navigation.navigate('ChatHistory')}
-              >
-                <Text style={styles.detailsButtonText}>Show Details</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
       
       <BottomNavigation />
+
+      {/* Daily Goal Setting Modal */}
+      <Modal
+        visible={isGoalModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsGoalModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Set Daily Energy Limit</Text>
+                <Text style={styles.modalSubtitle}>Enter your target max energy usage (Wh):</Text>
+                <TextInput 
+                    style={styles.goalInput}
+                    keyboardType="numeric"
+                    value={goalInput}
+                    onChangeText={setGoalInput}
+                    placeholder="300"
+                />
+                <View style={styles.modalButtons}>
+                    <TouchableOpacity 
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={() => setIsGoalModalVisible(false)}
+                    >
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.modalButton, styles.saveButton]}
+                        onPress={handleSaveGoal}
+                    >
+                        <Text style={styles.saveButtonText}>Save</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -345,47 +379,74 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 20
   },
-  actionButtons: {
+  // Removed actionButtons and related styles
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 25,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 20,
+  },
+  goalInput: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 18,
+    textAlign: 'center',
+    marginBottom: 25,
+    backgroundColor: '#f9f9f9',
+  },
+  modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 24
   },
-  actionButton: {
-    backgroundColor: '#1fb28a',
-    padding: 14,
-    borderRadius: 20,
-    width: '48%',
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
+    marginHorizontal: 5,
   },
-  actionButtonText: {
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  saveButton: {
+    backgroundColor: '#1fb28a',
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontWeight: '600',
+  },
+  saveButtonText: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 15
-  },
-  detailsButton: {
-    backgroundColor: '#fff',
-    padding: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    width: '48%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2
-  },
-  detailsButtonText: {
-    fontWeight: '500',
-    fontSize: 15,
-    color: '#666'
   }
 });
 

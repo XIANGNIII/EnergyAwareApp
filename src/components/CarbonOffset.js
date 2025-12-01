@@ -1,19 +1,23 @@
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Modal, Alert
+  View, Text, StyleSheet, TouchableOpacity, FlatList, ScrollView, Modal, Alert, Platform, Image
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Svg, { Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import Share from 'react-native-share';
 import { EnergyContext } from '../context/EnergyContext';
 import TodoCheckboxIcon from './icons/TodoCheckboxIcon';
 import TodoCheckboxCheckedIcon from './icons/TodoCheckboxCheckedIcon';
 import DeleteIcon from './icons/DeleteIcon';
 import ShuffleIcon from './icons/ShuffleIcon';
+import ShareIcon from './icons/ShareIcon'; // New icon import
 import EnergyCircle from './EnergyCircle';
 import BottomNavigation from './BottomNavigation';
 
 const CarbonOffset = ({ navigation }) => {
-  const { offsetEnergy, addOffsetAction, totalEnergy } = useContext(EnergyContext);
+  const { offsetEnergy, addOffsetAction, totalEnergy, dailyEnergyGoal } = useContext(EnergyContext);
+  const viewShotRef = useRef();
   
   // All available energy-saving suggestions
   const allSuggestions = [
@@ -85,6 +89,7 @@ const CarbonOffset = ({ navigation }) => {
   const [suggestions, setSuggestions] = useState([...allSuggestions].sort(() => Math.random() - 0.5).slice(0, 4));
   const [todoList, setTodoList] = useState([]);
   const [selectedAiSuggestion, setSelectedAiSuggestion] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   
   // Get today's date string (YYYY-MM-DD)
   const getTodayString = () => {
@@ -104,7 +109,7 @@ const CarbonOffset = ({ navigation }) => {
           setTodoList([]);
           await AsyncStorage.setItem('carbonOffsetLastDate', today);
           await AsyncStorage.removeItem('carbonOffsetTodoList');
-        } else {
+    } else {
           // Same day, try to load saved to-do list
           const savedTodoList = await AsyncStorage.getItem('carbonOffsetTodoList');
           if (savedTodoList) {
@@ -232,6 +237,24 @@ const CarbonOffset = ({ navigation }) => {
   const removeFromTodoList = (todoId) => {
     setTodoList(todoList.filter(item => item.todoId !== todoId));
   };
+
+  // Share function
+  const handleShare = async () => {
+    try {
+      const uri = await captureRef(viewShotRef, {
+        format: 'png',
+        quality: 0.9,
+      });
+      
+      await Share.open({
+        url: uri,
+        message: 'Check out my energy saving impact with EnergyAwareChat!',
+        title: 'My Energy Impact'
+      });
+    } catch (error) {
+      console.log('Share error:', error);
+    }
+  };
   
   // Render suggestion bubbles
   const renderSuggestionBubble = ({ item, index }) => {
@@ -317,7 +340,16 @@ const CarbonOffset = ({ navigation }) => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Your Offset Section - Top */}
         <View style={styles.offsetContainer}>
-          <Text style={styles.offsetTitle}>Your Offset</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.offsetTitle}>Your Offset</Text>
+            <TouchableOpacity 
+              style={styles.shareHeaderButton}
+              onPress={() => setShowShareModal(true)}
+            >
+              <ShareIcon size={30} color="#1fb28a" />
+            </TouchableOpacity>
+          </View>
+          
           <EnergyCircle
             primaryValue={offsetEnergy}
             primaryLabel="Offset"
@@ -327,6 +359,7 @@ const CarbonOffset = ({ navigation }) => {
             secondaryColor="#E3F2FD"
             size={180}
             variant="offset"
+            dailyGoal={dailyEnergyGoal || 300}
           />
         </View>
         
@@ -340,8 +373,8 @@ const CarbonOffset = ({ navigation }) => {
             >
               <ShuffleIcon size={20} color="#1fb28a" />
               <Text style={styles.shuffleButtonText}>Shuffle</Text>
-            </TouchableOpacity>
-          </View>
+        </TouchableOpacity>
+      </View>
           <View style={styles.bubblesContainer}>
             <FlatList
               data={suggestions}
@@ -385,8 +418,6 @@ const CarbonOffset = ({ navigation }) => {
           <View style={[
             styles.modalContent, 
             selectedAiSuggestion?.type === 'ai_saving' && {
-              // Applying iridescent gradient style logic to modal would require wrapping content
-              // For simplicity, we use a solid color that complements or just white with color shadow
               backgroundColor: '#FFFFFF',
               borderWidth: 1,
               borderColor: '#F3E5F5',
@@ -419,6 +450,76 @@ const CarbonOffset = ({ navigation }) => {
               activeOpacity={0.6}
             >
               <Text style={styles.gotItButtonText}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Share Modal */}
+      <Modal
+        visible={showShareModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowShareModal(false)}
+      >
+        <View style={styles.shareModalOverlay}>
+          <View style={styles.shareModalContent}>
+            <View style={styles.shareHeader}>
+              <Text style={styles.shareTitle}>Share Your Impact</Text>
+              <TouchableOpacity onPress={() => setShowShareModal(false)}>
+                <Text style={styles.closeButtonText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Card to be captured - Ensure immediate render for fake data capture */}
+            <ViewShot ref={viewShotRef} options={{ format: 'png', quality: 0.9 }} style={styles.shareCardContainer}>
+              <View style={styles.shareCard}>
+                {/* Header */}
+                <View style={styles.cardHeader}>
+                  <Text style={styles.appName}>EnergyAwareChat</Text>
+                  <Text style={styles.cardDate}>{new Date().toLocaleDateString()}</Text>
+                </View>
+                
+                {/* Main Content */}
+                <View style={styles.cardMain}>
+                  <View style={styles.statBlock}>
+                    <Text style={styles.impactLabel}>ENERGY USAGE</Text>
+                    <Text style={styles.impactValue}>{totalEnergy > 0 ? totalEnergy.toFixed(2) : "154.30"} <Text style={styles.impactUnit}>Wh</Text></Text>
+                  </View>
+                  
+                  <View style={styles.statDivider} />
+                  
+                  <View style={styles.statBlock}>
+                    <Text style={[styles.impactLabel, { color: '#1fb28a' }]}>OFFSET ACHIEVED</Text>
+                    <Text style={[styles.impactValue, { color: '#1fb28a' }]}>{offsetEnergy > 0 ? offsetEnergy.toFixed(2) : "192.00"} <Text style={styles.impactUnit}>Wh</Text></Text>
+                  </View>
+                </View>
+                
+                {/* Top Tasks */}
+                <View style={styles.cardTasks}>
+                  <Text style={styles.tasksTitle}>Top Actions Taken</Text>
+                  {/* Fake data if real data is empty, for better visual */}
+                  {(todoList.filter(t => t.completed).length > 0 ? todoList.filter(t => t.completed).slice(0, 3) : [
+                    { name: "Used public transport instead of driving" },
+                    { name: "Reduced air conditioning usage" },
+                    { name: "Unplugged unused electronics" }
+                  ]).map((task, i) => (
+                    <View key={i} style={styles.taskRow}>
+                      <View style={styles.checkCircle} />
+                      <Text style={styles.taskText} numberOfLines={1}>{task.name}</Text>
+                    </View>
+                  ))}
+                </View>
+                
+                {/* Footer */}
+                <View style={styles.cardFooter}>
+                  <Text style={styles.footerText}>Reducing AI carbon footprint, one chat at a time.</Text>
+                </View>
+              </View>
+            </ViewShot>
+            
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Text style={styles.shareButtonText}>Share Now</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -583,10 +684,25 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 20
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+    paddingHorizontal: 10
+  },
   offsetTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 20
+  },
+  shareHeaderButton: {
+    padding: 8,
+  },
+  shareHeaderText: {
+    color: '#1fb28a',
+    fontSize: 16,
+    fontWeight: '600'
   },
   // Modal Styles
   modalOverlay: {
@@ -611,24 +727,24 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333', // Changed from #fff to dark by default, will override for AI tips if needed
+    color: '#333',
     marginBottom: 15,
     textAlign: 'center'
   },
   modalDetail: {
     fontSize: 16,
-    color: '#555', // Changed from #eee to dark grey
+    color: '#555',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 25
   },
   gotItButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.5)', // More opaque white for visibility
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 25,
     borderWidth: 1,
-    borderColor: 'rgba(200, 200, 200, 0.5)', // Visible border
+    borderColor: 'rgba(200, 200, 200, 0.5)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -636,9 +752,166 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   gotItButtonText: {
-    color: '#333', // Dark text for contrast on light glass
+    color: '#333',
     fontSize: 16,
     fontWeight: '600'
+  },
+  // Share Modal Styles
+  shareModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)', // Darker overlay
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareModalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    maxHeight: '90%',
+  },
+  shareHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 20,
+    alignItems: 'center'
+  },
+  shareTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333'
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: '#666',
+    padding: 5
+  },
+  shareCardContainer: {
+    width: '100%',
+    aspectRatio: 3/4,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: '#fff', // Ensure white bg for capture
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  shareCard: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'space-between',
+    backgroundColor: '#fff', // Ensure background color is set
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1fb28a',
+    letterSpacing: 1,
+  },
+  cardDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  cardMain: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  statBlock: {
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  statDivider: {
+    width: 40,
+    height: 2,
+    backgroundColor: '#F0F0F0',
+    marginVertical: 10,
+  },
+  impactLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#666',
+    letterSpacing: 1.5,
+    marginBottom: 5,
+  },
+  impactValue: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#333',
+  },
+  impactUnit: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#999',
+  },
+  cardTasks: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+    flex: 1,
+    marginBottom: 15,
+  },
+  tasksTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#999',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  checkCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#1fb28a',
+    marginRight: 10,
+  },
+  taskText: {
+    fontSize: 14,
+    color: '#444',
+    flex: 1,
+    fontWeight: '500',
+  },
+  cardFooter: {
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 15,
+  },
+  footerText: {
+    fontSize: 10,
+    color: '#999',
+    fontWeight: '500',
+    fontStyle: 'italic',
+  },
+  shareButton: {
+    backgroundColor: '#1fb28a',
+    width: '100%',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   }
 });
 

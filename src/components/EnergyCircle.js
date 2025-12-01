@@ -1,179 +1,271 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import Svg, { Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+
+const { width } = Dimensions.get('window');
+// Adjust bar width to be wider as requested
+const BAR_WIDTH = width * 0.85;
+const BAR_HEIGHT = 48; // Increased height for "thick" bar
+const BORDER_RADIUS = 24; // Rounded corners
 
 const EnergyCircle = ({ 
   primaryValue, 
   primaryLabel, 
   secondaryValue, 
   secondaryLabel,
-  primaryColor = '#1fb28a',
-  secondaryColor = '#E3F2FD',
-  size = 180,
+  dailyGoal = 300, // Default daily goal
+  onGoalPress, // Callback when goal is pressed
   variant = 'report' // 'report' or 'offset'
 }) => {
-  const center = size / 2;
-  const outerRadius = size / 2 - 8;
-  const innerRadius = outerRadius - 10;
-  const outerCircumference = 2 * Math.PI * outerRadius;
-  const innerCircumference = 2 * Math.PI * innerRadius;
+  // Default is expanded (true)
+  const [isExpanded, setIsExpanded] = useState(true);
+  const isReport = variant === 'report';
   
-  // Determine which value is Usage and which is Offset
-  const isPrimaryUsage = primaryLabel === 'Usage';
-  const isSecondaryUsage = secondaryLabel === 'Usage';
-  
-  const usageValue = isPrimaryUsage ? primaryValue : (isSecondaryUsage ? secondaryValue : primaryValue);
-  const offsetValue = isPrimaryUsage ? secondaryValue : (isSecondaryUsage ? primaryValue : secondaryValue);
-  
-  // Calculate color based on Usage value
-  const getUsageColor = (usageValue) => {
-    if (usageValue < 100) {
-      // Less than 100Wh: Blue
-      return '#42A5F5';
+  // Calculate Usage Color based on value for Report
+  const getUsageColorInfo = (val) => {
+    if (val < dailyGoal * 0.33) {
+      return { colors: ['#42A5F5', '#2196F3'], label: 'Efficient' };
+    } else if (val < dailyGoal * 0.66) {
+      return { colors: ['#FF9800', '#F57C00'], label: 'Moderate' };
     } else {
-      // 100Wh and above: Gradient from orange to red
-      // Interpolate between orange (#FF9800) and red (#F44336)
-      const ratio = Math.min((usageValue - 100) / 100, 1); // Max out at 200Wh for full red
-      const r1 = 255, g1 = 152, b1 = 0; // Orange
-      const r2 = 244, g2 = 67, b2 = 54; // Red
-      const r = Math.round(r1 + (r2 - r1) * ratio);
-      const g = Math.round(g1 + (g2 - g1) * ratio);
-      const b = Math.round(b1 + (b2 - b1) * ratio);
-      return `rgb(${r}, ${g}, ${b})`;
+      return { colors: ['#F44336', '#D32F2F'], label: 'High' };
     }
   };
+
+  const usageValue = isReport ? primaryValue : secondaryValue;
+  const offsetValue = isReport ? secondaryValue : primaryValue;
   
-  // Outer circle (Usage) - always 100% filled, blue color
-  const usageColor = getUsageColor(usageValue);
-  const outerProgress = 1; // Always 100%
-  const outerStrokeDashoffset = 0; // No offset = full circle
+  const usageInfo = getUsageColorInfo(usageValue);
+  const offsetColors = ['#1fb28a', '#00897b'];
   
-  // Inner circle (Offset) - shows offset/usage percentage, green color
-  const offsetProgress = usageValue > 0 
-    ? Math.min(offsetValue / usageValue, 1) // offset/usage, max 100%
-    : 0;
-  const innerStrokeDashoffset = innerCircumference * (1 - offsetProgress);
-  
-  // Opacity based on variant
-  const outerOpacity = variant === 'offset' ? 0.2 : 1; // Blue circle more transparent in offset page
-  const innerOpacity = variant === 'report' ? 0.2 : 1; // Green circle more transparent in report page
-  
+  // Calculate progress based on daily goal
+  let progressRatio = 0;
+  let progressColors = [];
+  let trackColor = '#F0F2F5';
+  let mainText = '';
+
+  if (isReport) {
+    progressRatio = Math.min(usageValue / dailyGoal, 1);
+    progressColors = usageInfo.colors;
+    mainText = `${usageValue.toFixed(2)} Wh`;
+  } else {
+    progressRatio = usageValue > 0 ? Math.min(offsetValue / usageValue, 1) : 0;
+    progressColors = offsetColors;
+    mainText = `${offsetValue.toFixed(2)} Wh`;
+  }
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  // Determine text color based on progress ratio to ensure contrast
+  // If bar is less than 55% filled, text might be on light background
+  const textColor = progressRatio > 0.55 ? '#FFFFFF' : '#333333';
+  const textShadowStyle = progressRatio > 0.55 ? {
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  } : {};
+
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      <Svg width={size} height={size} style={styles.svg}>
-        {/* Outer circle background (gray) */}
-        <Circle
-          cx={center}
-          cy={center}
-          r={outerRadius}
-          stroke="#f5f5f5"
-          strokeWidth="6"
-          fill="none"
-        />
-        {/* Outer circle (Usage) - always 100%, blue */}
-        <Circle
-          cx={center}
-          cy={center}
-          r={outerRadius}
-          stroke={usageColor}
-          strokeWidth="6"
-          fill="none"
-          strokeDasharray={outerCircumference}
-          strokeDashoffset={outerStrokeDashoffset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${center} ${center})`}
-          opacity={outerOpacity}
-        />
-        {/* Inner circle background (gray) */}
-        <Circle
-          cx={center}
-          cy={center}
-          r={innerRadius}
-          stroke="#f5f5f5"
-          strokeWidth="5"
-          fill="none"
-        />
-        {/* Inner circle (Offset) - offset/usage percentage, green */}
-        {offsetValue !== undefined && (
-          <Circle
-            cx={center}
-            cy={center}
-            r={innerRadius}
-            stroke={primaryColor}
-            strokeWidth="5"
-            fill="none"
-            strokeDasharray={innerCircumference}
-            strokeDashoffset={innerStrokeDashoffset}
-            strokeLinecap="round"
-            transform={`rotate(-90 ${center} ${center})`}
-            opacity={innerOpacity}
-          />
-        )}
-      </Svg>
-      <View style={styles.content}>
-        <Text style={[
-          styles.primaryValue,
-          isPrimaryUsage && { color: usageColor }
-        ]}>
-          {primaryValue.toFixed(2)}
-        </Text>
-        <Text style={styles.primaryLabel}>{primaryLabel}</Text>
-        {secondaryValue !== undefined && (
-          <>
-            <View style={styles.divider} />
-            <Text style={[
-              styles.secondaryValue,
-              isSecondaryUsage && { color: usageColor }
-            ]}>
-              {secondaryValue.toFixed(2)}
+    <View style={styles.container}>
+      
+      {/* The Thick Progress Bar Button - Now clickable to toggle details */}
+      <TouchableOpacity 
+        activeOpacity={0.9} 
+        onPress={toggleExpand}
+        style={styles.barWrapper}
+      >
+        <Svg width={BAR_WIDTH} height={BAR_HEIGHT} style={styles.svg}>
+            <Defs>
+                <LinearGradient id="thickBarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <Stop offset="0%" stopColor={progressColors[0]} />
+                    <Stop offset="100%" stopColor={progressColors[1]} />
+                </LinearGradient>
+            </Defs>
+            
+            {/* Track (Background) */}
+            <Rect
+                x="0"
+                y="0"
+                width={BAR_WIDTH}
+                height={BAR_HEIGHT}
+                rx={BORDER_RADIUS}
+                fill={trackColor}
+            />
+
+            {/* Progress (Foreground) */}
+            <Rect
+                x="0"
+                y="0"
+                width={Math.max(BAR_WIDTH * progressRatio, BORDER_RADIUS * 2)} // Ensure minimal visibility
+                height={BAR_HEIGHT}
+                rx={BORDER_RADIUS}
+                fill="url(#thickBarGradient)"
+            />
+        </Svg>
+        
+        {/* Overlay Text */}
+        <View style={styles.overlayContainer}>
+            <Text style={[styles.overlayText, { color: textColor }, textShadowStyle]}>{mainText}</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Details Section - Visible based on isExpanded state */}
+      {isExpanded && (
+        <View style={styles.detailsContainer}>
+            {/* Daily Goal Setting */}
+            {isReport && (
+                <View style={styles.goalContainer}>
+                    <Text style={styles.goalLabel}>Daily Limit: </Text>
+                    <TouchableOpacity onPress={onGoalPress} style={styles.goalButton}>
+                        <Text style={styles.goalValue}>
+                            {dailyGoal.toFixed(0)} Wh
+                        </Text>
+                        <View style={styles.underline} />
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            <Text style={styles.subText}>
+                {isReport 
+                ? `${(progressRatio * 100).toFixed(0)}% of daily limit used`
+                : `${(progressRatio * 100).toFixed(0)}% of usage offset`
+                }
             </Text>
-            <Text style={styles.secondaryLabel}>{secondaryLabel}</Text>
-          </>
-        )}
-      </View>
+
+            <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Usage</Text>
+                    <Text style={styles.statValue}>{usageValue.toFixed(1)}</Text>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Offset</Text>
+                    <Text style={[styles.statValue, { color: '#1fb28a' }]}>
+                        {offsetValue.toFixed(1)}
+                    </Text>
+                </View>
+            </View>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    position: 'relative',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    marginVertical: 10,
+  },
+  barWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   svg: {
+    borderRadius: BORDER_RADIUS,
+  },
+  overlayContainer: {
     position: 'absolute',
-  },
-  content: {
-    alignItems: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  primaryValue: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#2E4454',
-    marginBottom: 3,
+  overlayText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
-  primaryLabel: {
-    fontSize: 12,
-    color: '#666',
+  detailsContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+    width: BAR_WIDTH,
+    padding: 15,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  goalContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+  },
+  goalLabel: {
+    fontSize: 14,
+    color: '#6B7280',
     fontWeight: '500',
   },
-  divider: {
-    width: 24,
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 6,
+  goalButton: {
+    alignItems: 'center',
+    marginLeft: 5,
   },
-  secondaryValue: {
+  goalValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    color: '#6B7280', // Same as label
+  },
+  underline: {
+    width: '100%',
+    height: 1,
+    backgroundColor: '#6B7280', // Same as label
+    marginTop: 1,
+  },
+  subText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 15,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginBottom: 4,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  statValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#999',
-    marginBottom: 2,
+    color: '#374151',
   },
-  secondaryLabel: {
-    fontSize: 10,
-    color: '#999',
+  divider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E5E7EB',
   },
 });
 

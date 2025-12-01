@@ -177,6 +177,31 @@
         }
       }
     },
+    "react-native-share": {
+      "root": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-share",
+      "name": "react-native-share",
+      "platforms": {
+        "ios": {
+          "podspecPath": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-share/RNShare.podspec",
+          "version": "12.2.1",
+          "configurations": [],
+          "scriptPhases": []
+        },
+        "android": {
+          "sourceDir": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-share/android",
+          "packageImportPath": "import cl.json.RNSharePackage;",
+          "packageInstance": "new RNSharePackage()",
+          "buildTypes": [],
+          "libraryName": "RNShareSpec",
+          "componentDescriptors": [],
+          "cmakeListsPath": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-share/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cxxModuleCMakeListsModuleName": null,
+          "cxxModuleCMakeListsPath": null,
+          "cxxModuleHeaderName": null,
+          "isPureCxxDependency": false
+        }
+      }
+    },
     "react-native-svg": {
       "root": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-svg",
       "name": "react-native-svg",
@@ -250,6 +275,31 @@
           "libraryName": "RNVectorIconsSpec",
           "componentDescriptors": [],
           "cmakeListsPath": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-vector-icons/android/build/generated/source/codegen/jni/CMakeLists.txt",
+          "cxxModuleCMakeListsModuleName": null,
+          "cxxModuleCMakeListsPath": null,
+          "cxxModuleHeaderName": null,
+          "isPureCxxDependency": false
+        }
+      }
+    },
+    "react-native-view-shot": {
+      "root": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-view-shot",
+      "name": "react-native-view-shot",
+      "platforms": {
+        "ios": {
+          "podspecPath": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-view-shot/react-native-view-shot.podspec",
+          "version": "4.0.3",
+          "configurations": [],
+          "scriptPhases": []
+        },
+        "android": {
+          "sourceDir": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-view-shot/android",
+          "packageImportPath": "import fr.greweb.reactnativeviewshot.RNViewShotPackage;",
+          "packageInstance": "new RNViewShotPackage()",
+          "buildTypes": [],
+          "libraryName": "rnviewshot",
+          "componentDescriptors": [],
+          "cmakeListsPath": "/Users/ricedumpling/Desktop/EnergyAwareChat_11.7/node_modules/react-native-view-shot/android/build/generated/source/codegen/jni/CMakeLists.txt",
           "cxxModuleCMakeListsModuleName": null,
           "cxxModuleCMakeListsPath": null,
           "cxxModuleHeaderName": null,

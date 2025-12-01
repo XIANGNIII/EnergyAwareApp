@@ -1,200 +1,3 @@
-// import React, { createContext, useState, useEffect } from 'react';
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// export const EnergyContext = createContext();
-
-// export const EnergyProvider = ({ children }) => {
-//   // 初始化所有状态变量
-//   const [selectedModel, setSelectedModel] = useState('GPT-4o Mini');
-//   const [totalEnergy, setTotalEnergy] = useState(0);
-//   const [energyLog, setEnergyLog] = useState([]);
-//   const [chatHistory, setChatHistory] = useState([]);
-//   const [currentChatId, setCurrentChatId] = useState(null);
-  
-//   // 从存储加载数据
-//   useEffect(() => {
-//     const loadData = async () => {
-//       try {
-//         const storedTotalEnergy = await AsyncStorage.getItem('totalEnergy');
-//         const storedEnergyLog = await AsyncStorage.getItem('energyLog');
-//         const storedChatHistory = await AsyncStorage.getItem('chatHistory');
-        
-//         if (storedTotalEnergy) setTotalEnergy(parseFloat(storedTotalEnergy));
-//         if (storedEnergyLog) setEnergyLog(JSON.parse(storedEnergyLog));
-//         if (storedChatHistory) setChatHistory(JSON.parse(storedChatHistory));
-//       } catch (error) {
-//         console.error('Error loading data from AsyncStorage:', error);
-//       }
-//     };
-    
-//     loadData();
-//   }, []);
-  
-//   // 保存数据到存储
-//   useEffect(() => {
-//     const saveData = async () => {
-//       try {
-//         await AsyncStorage.setItem('totalEnergy', totalEnergy.toString());
-//         await AsyncStorage.setItem('energyLog', JSON.stringify(energyLog));
-//         await AsyncStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-//       } catch (error) {
-//         console.error('Error saving data to AsyncStorage:', error);
-//       }
-//     };
-    
-//     saveData();
-//   }, [totalEnergy, energyLog, chatHistory]);
-  
-//   // 计算token数量的函数 (简单估算)
-//   const estimateTokens = (text) => {
-//     if (!text) return 0;
-//     return Math.ceil(text.length / 4);
-//   };
-  
-//   // // 开始新的聊天会话
-//   // const startNewChat = () => {
-//   //   // 只有当currentChatId为null或undefined时才设置新ID
-//   //   if (!currentChatId) {
-//   //     const newChatId = Date.now().toString();
-//   //     setCurrentChatId(newChatId);
-//   //     return newChatId;
-//   //   }
-//   //   return currentChatId; // 如果已经有ID，则返回现有ID
-//   // };
-//   const startNewChat = useCallback(() => {
-//     if (!currentChatId) {
-//       const newChatId = Date.now().toString();
-//       setCurrentChatId(newChatId);
-//       return newChatId;
-//     }
-//     return currentChatId;
-//   }, [currentChatId]);
-  
-//   // 添加聊天记录 - 修改为支持对话连续性
-//   const addChatRecord = (userInput, aiResponse, model) => {
-//     // 保护性检查
-//     if (!userInput || !aiResponse || !model) {
-//       console.warn('Invalid chat record data', { userInput, aiResponse, model });
-//       return;
-//     }
-    
-//     const timestamp = new Date();
-    
-//     // 估计token数
-//     const userTokens = estimateTokens(userInput);
-//     const aiTokens = estimateTokens(aiResponse);
-//     const totalTokens = userTokens + aiTokens;
-    
-//     // 基于不同模型估算能源消耗 (Wh)
-//     const modelEnergyRate = {
-//       'GPT-5': 0.03,
-//       'GPT-4.5 Turbo': 0.025, 
-//       'GPT-4o': 0.02,
-//       'GPT-4o Mini': 0.01
-//     };
-    
-//     // 计算能源消耗
-//     const rate = modelEnergyRate[model] || 0.01;
-//     const energyConsumption = rate * totalTokens / 1000; // 单位：Wh
-    
-//     // 如果没有当前聊天ID，创建一个新的
-//     const chatId = currentChatId || startNewChat();
-    
-//     setChatHistory(prevHistory => {
-//       // 检查是否已存在此ID的聊天记录
-//       const existingChatIndex = prevHistory.findIndex(chat => chat.id === chatId);
-      
-//       if (existingChatIndex >= 0) {
-//         // 更新现有聊天记录
-//         const updatedHistory = [...prevHistory];
-//         const existingChat = updatedHistory[existingChatIndex];
-        
-//         // 添加新的消息对
-//         const updatedMessages = [
-//           ...existingChat.messages || [],
-//           { 
-//             userInput, 
-//             aiResponse, 
-//             timestamp,
-//             userTokens,
-//             aiTokens,
-//             totalTokens,
-//             energy: energyConsumption
-//           }
-//         ];
-        
-//         // 更新总token和能源消耗
-//         const updatedTotalUserTokens = (existingChat.totalUserTokens || 0) + userTokens;
-//         const updatedTotalAiTokens = (existingChat.totalAiTokens || 0) + aiTokens;
-//         const updatedTotalTokens = updatedTotalUserTokens + updatedTotalAiTokens;
-//         const updatedTotalEnergy = (existingChat.totalEnergy || 0) + energyConsumption;
-        
-//         // 创建更新后的聊天记录
-//         updatedHistory[existingChatIndex] = {
-//           ...existingChat,
-//           lastUserInput: userInput,
-//           lastAiResponse: aiResponse,
-//           lastTimestamp: timestamp,
-//           messages: updatedMessages,
-//           totalUserTokens: updatedTotalUserTokens,
-//           totalAiTokens: updatedTotalAiTokens,
-//           totalTokens: updatedTotalTokens,
-//           totalEnergy: updatedTotalEnergy
-//         };
-        
-//         return updatedHistory;
-//       } else {
-//         // 创建新的聊天记录
-//         const newChat = {
-//           id: chatId,
-//           model,
-//           lastUserInput: userInput,
-//           lastAiResponse: aiResponse,
-//           lastTimestamp: timestamp,
-//           messages: [{ 
-//             userInput, 
-//             aiResponse, 
-//             timestamp,
-//             userTokens,
-//             aiTokens,
-//             totalTokens,
-//             energy: energyConsumption
-//           }],
-//           totalUserTokens: userTokens,
-//           totalAiTokens: aiTokens,
-//           totalTokens: totalTokens,
-//           totalEnergy: energyConsumption
-//         };
-        
-//         return [newChat, ...prevHistory];
-//       }
-//     });
-    
-//     // 更新能源日志和总消耗
-//     setEnergyLog(prevLog => [...prevLog, { timestamp, energy: energyConsumption }]);
-//     setTotalEnergy(prevEnergy => prevEnergy + energyConsumption);
-//   };
-  
-//   return (
-//     <EnergyContext.Provider
-//       value={{
-//         selectedModel,
-//         setSelectedModel,
-//         totalEnergy,
-//         energyLog,
-//         chatHistory,
-//         addChatRecord,
-//         estimateTokens,
-//         startNewChat,
-//         currentChatId,
-//         setCurrentChatId
-//       }}
-//     >
-//       {children}
-//     </EnergyContext.Provider>
-//   );
-// };
-
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -206,6 +9,7 @@ export const EnergyProvider = ({ children }) => {
   const [currentPurpose, setCurrentPurpose] = useState('Daily Questions'); // 当前对话类型
   const [totalEnergy, setTotalEnergy] = useState(0);
   const [offsetEnergy, setOffsetEnergy] = useState(0);
+  const [dailyEnergyGoal, setDailyEnergyGoal] = useState(300); // 默认每日目标
   const [energyLog, setEnergyLog] = useState([]);
   const [chatHistory, setChatHistory] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
@@ -214,13 +18,15 @@ export const EnergyProvider = ({ children }) => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [storedEnergyLog, storedChatHistory, storedOffsetEnergy] = await Promise.all([
+        const [storedEnergyLog, storedChatHistory, storedOffsetEnergy, storedDailyGoal] = await Promise.all([
           AsyncStorage.getItem('energyLog'),
           AsyncStorage.getItem('chatHistory'),
-          AsyncStorage.getItem('offsetEnergy')
+          AsyncStorage.getItem('offsetEnergy'),
+          AsyncStorage.getItem('dailyEnergyGoal')
         ]);
         
         if (storedOffsetEnergy) setOffsetEnergy(parseFloat(storedOffsetEnergy));
+        if (storedDailyGoal) setDailyEnergyGoal(parseFloat(storedDailyGoal));
         if (storedEnergyLog) setEnergyLog(JSON.parse(storedEnergyLog));
         if (storedChatHistory) {
           // 确保日期字段是字符串格式
@@ -254,10 +60,11 @@ export const EnergyProvider = ({ children }) => {
     try {
       // totalEnergy 现在从 chatHistory 计算，不需要单独保存
       await AsyncStorage.setItem('offsetEnergy', offsetEnergy.toString());
+      await AsyncStorage.setItem('dailyEnergyGoal', dailyEnergyGoal.toString());
     } catch (error) {
       console.error('Error saving energy data:', error);
     }
-  }, [offsetEnergy]);
+  }, [offsetEnergy, dailyEnergyGoal]);
   
   // 从 chatHistory 计算总耗能
   useEffect(() => {
@@ -301,7 +108,7 @@ export const EnergyProvider = ({ children }) => {
   // 分开保存不同类型的数据，避免相互触发
   useEffect(() => {
     saveEnergyData();
-  }, [offsetEnergy, saveEnergyData]);
+  }, [offsetEnergy, dailyEnergyGoal, saveEnergyData]);
   
   useEffect(() => {
     saveLogData();
@@ -318,14 +125,6 @@ export const EnergyProvider = ({ children }) => {
   };
   
   // 开始新的聊天会话 - 使用 useCallback
-  // const startNewChat = useCallback(() => {
-  //   if (!currentChatId) {
-  //     const newChatId = Date.now().toString();
-  //     setCurrentChatId(newChatId);
-  //     return newChatId;
-  //   }
-  //   return currentChatId;
-  // }, [currentChatId]);
   const startNewChat = useCallback(() => {
     // 修正：无论如何都应该创建一个新ID，并设置它
     const newChatId = Date.now().toString();
@@ -485,6 +284,8 @@ export const EnergyProvider = ({ children }) => {
     setCurrentPurpose,
     totalEnergy,
     offsetEnergy,
+    dailyEnergyGoal,
+    setDailyEnergyGoal,
     energyLog,
     chatHistory,
     addChatRecord,
